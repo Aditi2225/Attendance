@@ -26,7 +26,7 @@ async function viewAttendance() {
     if (data.success) {
         let attendanceList = "<h3>Your Attendance</h3><ul>";
         data.attendance.forEach(record => {
-            attendanceList += `<li>Date: ${record.date} - Status: ${record.status}</li>`;
+            attendanceList += `<li>Date: ${record.date} Time: ${record.time} - Status: ${record.status}</li>`;
         });
         attendanceList += "</ul>";
         document.getElementById("attendanceList").innerHTML = attendanceList;
@@ -35,10 +35,33 @@ async function viewAttendance() {
     }
 }
 
+// async function startAttendance() {
+//     const response = await fetch('/api/start-attendance', { method: 'POST' });
+//     const data = await response.json();
+//     alert(data.message);
+// }
+
 async function startAttendance() {
-    const response = await fetch('/api/start-attendance', { method: 'POST' });
+    const timeLimitInput = document.getElementById("timeLimit").value;
+    const timeLimit = parseInt(timeLimitInput);
+
+    if (!timeLimit || timeLimit <= 0) {
+        alert("Please enter a valid time limit in minutes.");
+        return;
+    }
+
+    const response = await fetch('/api/start-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeLimit })
+    });
+
     const data = await response.json();
-    alert(data.message);
+    if (data.success) {
+        alert("Attendance session started for " + timeLimit + " minute(s).");
+    } else {
+        alert("Error starting attendance.");
+    }
 }
 
 async function facultyViewAttendance() {
@@ -46,16 +69,42 @@ async function facultyViewAttendance() {
     const data = await response.json();
 
     if (data.success) {
-        let attendanceTable = "<h3>Present Students</h3><table border='1'><tr><th>Name</th><th>Reg Number</th></tr>";
-        data.students.forEach(student => {
-            attendanceTable += `<tr><td>${student.name}</td><td>${student.reg_number}</td></tr>`;
+        let html = "<h3>Grouped Attendance for Today</h3>";
+
+        data.groupedAttendance.forEach((group, index) => {
+            if (group.length === 0) return;
+
+            html += `<h4>Group ${index + 1} - Date: ${group[0].date}</h4>`;
+            html += "<table border='1'><tr><th>S.No</th><th>Reg Number</th><th>Name</th><th>Time</th></tr>";
+
+            group.forEach((student, i) => {
+                html += `<tr><td>${i + 1}</td><td>${student.reg_number}</td><td>${student.name}</td><td>${student.time}</td></tr>`;
+            });
+
+            html += "</table><br>";
         });
-        attendanceTable += "</table>";
-        document.getElementById("attendanceTable").innerHTML = attendanceTable;
+
+        document.getElementById("attendanceTable").innerHTML = html;
     } else {
         alert("Error fetching attendance.");
     }
 }
+
+// async function facultyViewAttendance() {
+//     const response = await fetch('/api/faculty-view-attendance', { method: 'POST' });
+//     const data = await response.json();
+
+//     if (data.success) {
+//         let attendanceTable = "<h3>Present Students</h3><table border='1'><tr><th>Name</th><th>Reg Number</th></tr>";
+//         data.students.forEach(student => {
+//             attendanceTable += `<tr><td>${student.name}</td><td>${student.reg_number}</td></tr>`;
+//         });
+//         attendanceTable += "</table>";
+//         document.getElementById("attendanceTable").innerHTML = attendanceTable;
+//     } else {
+//         alert("Error fetching attendance.");
+//     }
+// }
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault(); // Prevent default form submission

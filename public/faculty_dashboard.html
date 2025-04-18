@@ -5,9 +5,15 @@
     <script defer src="script.js"></script>
 </head>
 <body>
-    <h2></h2>
+    <h2>Faculty Dashboard</h2>
+    
+    <label for="timeLimit">Enter Time Limit (in minutes):</label>
+    <input type="number" id="timeLimit" min="1" placeholder="Max 2">
     <button onclick="startAttendance()">Start Attendance</button>
+    
+    <br><br>
     <button onclick="facultyViewAttendance()">View Attendance</button>
+    
     <div id="attendanceTable"></div>
 </body>
 </html>
