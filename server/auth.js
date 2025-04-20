@@ -82,10 +82,11 @@ router.post('/mark-attendance', (req, res) => {
                                 msg = 'Attendance session expired, marked as Absent';
                             } else {
                                 msg = status === 'Present'
-                                    ? 'Attendance marked as Present (within allowed area)'
-                                    : 'You are outside the allowed area — marked as Absent';
+                                ? 'Attendance marked as Present (within allowed area)'
+                                : `You are outside the allowed area — marked as Absent. Your location: (${latitude}, ${longitude})`;
                             }
                             res.json({ success: status === 'Present', message: msg, date, time });
+
                         }
                     }
                 );
