@@ -27,6 +27,12 @@ async function markAttendance() {
         return;
     }
 
+    const classroom = prompt("Enter your classroom ID (e.g., 204b, 205a):");
+    if (!classroom) {
+        alert("Classroom ID is required.");
+        return;
+    }
+
     if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
         return;
@@ -39,7 +45,7 @@ async function markAttendance() {
         const response = await fetch('/api/mark-attendance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reg_number, latitude, longitude })
+            body: JSON.stringify({ reg_number, latitude, longitude, classroom })
         });
 
         const data = await response.json();

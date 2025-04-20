@@ -59,7 +59,7 @@ router.post('/start-attendance', (req, res) => {
 //     );
 // });
 router.post('/mark-attendance', (req, res) => {
-    const { reg_number, latitude, longitude } = req.body;
+    const { reg_number, latitude, longitude, classroom } = req.body;
     const currentTime = Date.now();
     const now = new Date();
     const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -76,13 +76,12 @@ router.post('/mark-attendance', (req, res) => {
         // ✅ Only check location if within time window
 
         const point = { lat: latitude, lng: longitude };
-        const allowedArea = [
-            { lat: 12.8440, lng: 80.1550 }, 
-            { lat: 12.8440, lng: 80.1558 }, 
-            { lat: 12.8435, lng: 80.1558 }, 
-            { lat: 12.8435, lng: 80.1550 }  
-          ];
-          
+        const allAreas = require('./allowedArea.json');
+        const allowedArea = allAreas[classroom];
+
+        if (!allowedArea) {
+            return res.status(400).json({ success: false, message: 'Invalid classroom ID or area not defined' });
+        }
 
         function isInsidePolygon(point, polygon) {
             let x = point.lat, y = point.lng;
