@@ -1,6 +1,9 @@
 async function markAttendance() {
-    const reg_number = prompt("Enter your registration number:");
-    if (!reg_number) return;
+    const reg_number = localStorage.getItem('reg_number');
+    if (!reg_number){
+        alert("Registration number not found. Please log in again.");
+        return;
+    }
 
     const response = await fetch('/api/mark-attendance', {
         method: 'POST',
@@ -19,8 +22,11 @@ async function markAttendance() {
 
 
 async function viewAttendance() {
-    const reg_number = prompt("Enter your registration number:");
-    if (!reg_number) return;
+    const reg_number = localStorage.getItem('reg_number');
+    if (!reg_number) {
+        alert("Registration number not found. Please log in again.");
+        return;
+    }
 
     const response = await fetch('/api/view-attendance', {
         method: 'POST',
@@ -111,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data.success) {
                 if (role === 'student') {
+                    localStorage.setItem('reg_number', identifier);
                     window.location.href = 'student_dashboard.html';
                 } else if (role === 'faculty') {
                     window.location.href = 'faculty_dashboard.html';
