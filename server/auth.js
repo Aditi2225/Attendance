@@ -18,20 +18,49 @@ router.post('/start-attendance', (req, res) => {
     res.json({ success: true, message: `Attendance started for ${timeLimit} minute(s)` });
 });
 
+// router.post('/mark-attendance', (req, res) => {
+//     const { reg_number } = req.body;
+//     const currentTime = Date.now();  
+//     const now = new Date();
+//     const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+//     const time = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' });
+ 
+
+//     if (!attendanceStartTime || !attendanceTimeLimit) {
+//         return res.status(400).json({ success: false, message: 'Attendance has not started' });
+//     }
+
+//     const timeElapsed = currentTime - attendanceStartTime;
+
+//     const status = timeElapsed <= attendanceTimeLimit ? 'Present' : 'Absent';
+
+//     db.run(
+//         `INSERT INTO attendance (reg_number, date, time, status) VALUES (?, ?, ?, ?)`,
+//         [reg_number, date, time, status],
+//         (err) => {
+//             if (err) {
+//                 res.status(500).json({ success: false, message: 'Database error' });
+//             } else {
+//                 const msg = status === 'Present' 
+//                     ? 'Attendance marked as Present' 
+//                     : 'Attendance session expired, marked as Absent';
+//                 res.json({ success: status === 'Present', message: msg, date, time });
+//             }
+//         }
+//     );
+// });
 router.post('/mark-attendance', (req, res) => {
-    const { reg_number } = req.body;
-    const currentTime = Date.now();  
+    const { reg_number, latitude, longitude } = req.body;
+    const currentTime = Date.now();
     const now = new Date();
     const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     const time = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' });
- 
 
     if (!attendanceStartTime || !attendanceTimeLimit) {
         return res.status(400).json({ success: false, message: 'Attendance has not started' });
     }
 
     const timeElapsed = currentTime - attendanceStartTime;
-
     const status = timeElapsed <= attendanceTimeLimit ? 'Present' : 'Absent';
 
     db.run(
@@ -39,12 +68,23 @@ router.post('/mark-attendance', (req, res) => {
         [reg_number, date, time, status],
         (err) => {
             if (err) {
-                res.status(500).json({ success: false, message: 'Database error' });
+                res.status(500).json({ success: false, message: 'Database error (attendance)' });
             } else {
-                const msg = status === 'Present' 
-                    ? 'Attendance marked as Present' 
-                    : 'Attendance session expired, marked as Absent';
-                res.json({ success: status === 'Present', message: msg, date, time });
+                // Insert location data
+                db.run(
+                    `INSERT INTO location (reg_number, latitude, longitude, date, time) VALUES (?, ?, ?, ?, ?)`,
+                    [reg_number, latitude, longitude, date, time],
+                    (locErr) => {
+                        if (locErr) {
+                            res.status(500).json({ success: false, message: 'Database error (location)' });
+                        } else {
+                            const msg = status === 'Present'
+                                ? 'Attendance marked as Present'
+                                : 'Attendance session expired, marked as Absent';
+                            res.json({ success: status === 'Present', message: msg, date, time });
+                        }
+                    }
+                );
             }
         }
     );

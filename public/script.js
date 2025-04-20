@@ -1,25 +1,58 @@
+// async function markAttendance() {
+//     const reg_number = localStorage.getItem('reg_number');
+//     if (!reg_number){
+//         alert("Registration number not found. Please log in again.");
+//         return;
+//     }
+
+//     const response = await fetch('/api/mark-attendance', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ reg_number })
+//     });
+
+//     const data = await response.json();
+
+//     if (data.success) {
+//         alert(`Attendance marked! Date: ${data.date}, Time: ${data.time}`);
+//     } else {
+//         alert(data.message);
+//     }
+// }
+
 async function markAttendance() {
     const reg_number = localStorage.getItem('reg_number');
-    if (!reg_number){
+    if (!reg_number) {
         alert("Registration number not found. Please log in again.");
         return;
     }
 
-    const response = await fetch('/api/mark-attendance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reg_number })
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-        alert(`Attendance marked! Date: ${data.date}, Time: ${data.time}`);
-    } else {
-        alert(data.message);
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
     }
-}
 
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        const response = await fetch('/api/mark-attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reg_number, latitude, longitude })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Attendance marked! Date: ${data.date}, Time: ${data.time}`);
+        } else {
+            alert(data.message);
+        }
+    }, () => {
+        alert("Unable to retrieve your location. Please allow location access.");
+    });
+}
 
 async function viewAttendance() {
     const reg_number = localStorage.getItem('reg_number');
