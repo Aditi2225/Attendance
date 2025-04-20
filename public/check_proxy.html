@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Check Proxy - Location View</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 90vh;
+            width: 100%;
+            margin: 20px auto;
+            border-radius: 10px;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Student Locations - Proxy Check</h2>
+    <div id="map"></div>
+
+    <script>
+        async function loadStudentLocations() {
+          const res = await fetch('/api/check-proxy');
+          const data = await res.json();
+          console.log("Fetched locations:", data);
+      
+          if (!data.success || !data.locations.length) {
+            alert("No student location data found.");
+            return;
+          }
+      
+          const map = L.map('map').setView([12.84, 80.15], 17);
+      
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            detectRetina: true 
+          }).addTo(map);
+          
+      
+          data.locations.forEach(student => {
+            if (student.latitude && student.longitude) {
+                console.log("Placing marker for:", student);
+              L.marker([student.latitude, student.longitude])
+                .addTo(map)
+                .bindPopup(`
+                  <b>${student.name}</b><br>
+                  ${student.reg_number}<br>
+                  Time: ${student.time}
+                `);
+            }
+          });
+        }
+      
+        loadStudentLocations();
+      </script>
+            
+</body>
+</html>

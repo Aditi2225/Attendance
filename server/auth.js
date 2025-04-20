@@ -153,6 +153,33 @@ router.post('/faculty-view-attendance', (req, res) => {
         }
     });
 });
+router.get('/api/check-proxy', (req, res) => {
+    const date = new Date().toISOString().split('T')[0];
+    console.log("Check proxy API called");
+    const sql = `
+        SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
+        FROM attendance a
+        JOIN students s ON s.reg_number = a.reg_number
+        JOIN (
+            SELECT reg_number, MAX(time) AS max_time
+            FROM location
+            WHERE date = ?
+            GROUP BY reg_number
+        ) latest ON latest.reg_number = a.reg_number
+        JOIN location l ON l.reg_number = latest.reg_number AND l.time = latest.max_time
+        WHERE a.date = ? AND a.status = 'Present'
+    `;
+
+    db.all(sql, [date, date], (err, rows) => {
+        if (err) {
+            console.error(err);
+            res.json({ success: false, message: 'Database error' });
+        } else {
+            res.json({ success: true, locations: rows });
+        }
+    });
+});
+
 
 router.post('/login', (req, res) => {
     const { username, identifier, role } = req.body;
@@ -205,36 +232,6 @@ router.post('/signup', (req, res) => {
         });
     });
 });
-
-
-// router.post('/signup', (req, res) => {
-//     const { username, identifier } = req.body;
-
-//     if (!username || !identifier) {
-//         return res.status(400).json({ success: false, message: 'Missing username or identifier' });
-//     }
-
-//     db.get('SELECT * FROM students WHERE reg_number = ?', [identifier], (err, row) => {
-//         if (err) {
-//             console.error("Database error:", err.message);
-//             return res.status(500).json({ success: false, message: 'Database error' });
-//         }
-
-//         if (row) {
-//             return res.status(400).json({ success: false, message: 'Student already registered' });
-//         }
-
-//         db.run('INSERT INTO students (name, reg_number) VALUES (?, ?)', [username, identifier], function (err) {
-//             if (err) {
-//                 console.error("Insert error:", err.message);
-//                 return res.status(500).json({ success: false, message: 'Failed to register student' });
-//             }
-
-//             console.log("Student registered:", { id: this.lastID, name: username, reg_number: identifier });
-//             res.json({ success: true });
-//         });
-//     });
-// });
 
 
 module.exports = router;
