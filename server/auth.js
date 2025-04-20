@@ -30,10 +30,9 @@ router.post('/mark-attendance', (req, res) => {
     }
 
     const timeElapsed = currentTime - attendanceStartTime;
-    let status = 'Absent'; // default
+    let status = 'Absent'; 
 
     if (timeElapsed <= attendanceTimeLimit) {
-        // ✅ Only check location if within time window
 
         const point = { lat: latitude, lng: longitude };
         const allAreas = require('./allowedArea.json');
