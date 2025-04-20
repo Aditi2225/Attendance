@@ -22,8 +22,9 @@ router.post('/mark-attendance', (req, res) => {
     const { reg_number } = req.body;
     const currentTime = Date.now();  
     const now = new Date();
-    const date = now.toLocaleDateString('en-CA'); 
-    const time = now.toLocaleTimeString('en-GB', { hour12: false }); 
+    const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const time = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' });
+ 
 
     if (!attendanceStartTime || !attendanceTimeLimit) {
         return res.status(400).json({ success: false, message: 'Attendance has not started' });
