@@ -1,0 +1,74 @@
+<!-- view_attendance.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Attendance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background-color: #f4f4f4;
+    }
+
+    h3, h4 {
+      color: #2c3e50;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+
+    td {
+      background-color: #ecf0f1;
+    }
+  </style>
+</head>
+<body>
+  <h3>Grouped Attendance for Today</h3>
+  <div id="attendanceContent"></div>
+
+  <script>
+    async function loadAttendance() {
+      const response = await fetch('/api/faculty-view-attendance', { method: 'POST' });
+      const data = await response.json();
+
+      if (data.success) {
+        let html = '';
+
+        data.groupedAttendance.forEach((group, index) => {
+          if (group.length === 0) return;
+
+          html += `<h4>Group ${index + 1} - Date: ${group[0].date}</h4>`;
+          html += "<table><tr><th>S.No</th><th>Reg Number</th><th>Name</th><th>Time</th></tr>";
+
+          group.forEach((student, i) => {
+            html += `<tr><td>${i + 1}</td><td>${student.reg_number}</td><td>${student.name}</td><td>${student.time}</td></tr>`;
+          });
+
+          html += "</table>";
+        });
+
+        document.getElementById("attendanceContent").innerHTML = html;
+      } else {
+        document.getElementById("attendanceContent").innerHTML = "<p>Error fetching attendance data.</p>";
+      }
+    }
+
+    loadAttendance();
+  </script>
+</body>
+</html>
