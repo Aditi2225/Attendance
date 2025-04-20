@@ -19,19 +19,17 @@ router.post('/start-attendance', (req, res) => {
 });
 
 // router.post('/mark-attendance', (req, res) => {
-//     const { reg_number } = req.body;
-//     const currentTime = Date.now();  
+//     const { reg_number, latitude, longitude } = req.body;
+//     const currentTime = Date.now();
 //     const now = new Date();
 //     const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 //     const time = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' });
- 
 
 //     if (!attendanceStartTime || !attendanceTimeLimit) {
 //         return res.status(400).json({ success: false, message: 'Attendance has not started' });
 //     }
 
 //     const timeElapsed = currentTime - attendanceStartTime;
-
 //     const status = timeElapsed <= attendanceTimeLimit ? 'Present' : 'Absent';
 
 //     db.run(
@@ -39,12 +37,23 @@ router.post('/start-attendance', (req, res) => {
 //         [reg_number, date, time, status],
 //         (err) => {
 //             if (err) {
-//                 res.status(500).json({ success: false, message: 'Database error' });
+//                 res.status(500).json({ success: false, message: 'Database error (attendance)' });
 //             } else {
-//                 const msg = status === 'Present' 
-//                     ? 'Attendance marked as Present' 
-//                     : 'Attendance session expired, marked as Absent';
-//                 res.json({ success: status === 'Present', message: msg, date, time });
+//                 // Insert location data
+//                 db.run(
+//                     `INSERT INTO location (reg_number, latitude, longitude, date, time) VALUES (?, ?, ?, ?, ?)`,
+//                     [reg_number, latitude, longitude, date, time],
+//                     (locErr) => {
+//                         if (locErr) {
+//                             res.status(500).json({ success: false, message: 'Database error (location)' });
+//                         } else {
+//                             const msg = status === 'Present'
+//                                 ? 'Attendance marked as Present'
+//                                 : 'Attendance session expired, marked as Absent';
+//                             res.json({ success: status === 'Present', message: msg, date, time });
+//                         }
+//                     }
+//                 );
 //             }
 //         }
 //     );
@@ -61,8 +70,41 @@ router.post('/mark-attendance', (req, res) => {
     }
 
     const timeElapsed = currentTime - attendanceStartTime;
-    const status = timeElapsed <= attendanceTimeLimit ? 'Present' : 'Absent';
+    let status = 'Absent'; // default
 
+    if (timeElapsed <= attendanceTimeLimit) {
+        // ✅ Only check location if within time window
+
+        const point = { lat: latitude, lng: longitude };
+        const allowedArea = [
+            { lat: 12.8440, lng: 80.1550 }, 
+            { lat: 12.8440, lng: 80.1558 }, 
+            { lat: 12.8435, lng: 80.1558 }, 
+            { lat: 12.8435, lng: 80.1550 }  
+          ];
+          
+
+        function isInsidePolygon(point, polygon) {
+            let x = point.lat, y = point.lng;
+            let inside = false;
+
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                let xi = polygon[i].lat, yi = polygon[i].lng;
+                let xj = polygon[j].lat, yj = polygon[j].lng;
+
+                let intersect = ((yi > y) !== (yj > y)) &&
+                    (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-10) + xi);
+                if (intersect) inside = !inside;
+            }
+
+            return inside;
+        }
+
+        const insideGeoFence = isInsidePolygon(point, allowedArea);
+        status = insideGeoFence ? 'Present' : 'Absent';
+    }
+
+    // ✅ Save attendance and location
     db.run(
         `INSERT INTO attendance (reg_number, date, time, status) VALUES (?, ?, ?, ?)`,
         [reg_number, date, time, status],
@@ -70,7 +112,6 @@ router.post('/mark-attendance', (req, res) => {
             if (err) {
                 res.status(500).json({ success: false, message: 'Database error (attendance)' });
             } else {
-                // Insert location data
                 db.run(
                     `INSERT INTO location (reg_number, latitude, longitude, date, time) VALUES (?, ?, ?, ?, ?)`,
                     [reg_number, latitude, longitude, date, time],
@@ -78,9 +119,14 @@ router.post('/mark-attendance', (req, res) => {
                         if (locErr) {
                             res.status(500).json({ success: false, message: 'Database error (location)' });
                         } else {
-                            const msg = status === 'Present'
-                                ? 'Attendance marked as Present'
-                                : 'Attendance session expired, marked as Absent';
+                            let msg;
+                            if (timeElapsed > attendanceTimeLimit) {
+                                msg = 'Attendance session expired, marked as Absent';
+                            } else {
+                                msg = status === 'Present'
+                                    ? 'Attendance marked as Present (within allowed area)'
+                                    : 'You are outside the allowed area — marked as Absent';
+                            }
                             res.json({ success: status === 'Present', message: msg, date, time });
                         }
                     }
@@ -89,6 +135,7 @@ router.post('/mark-attendance', (req, res) => {
         }
     );
 });
+
 
 router.post('/view-attendance', (req, res) => {
     const { reg_number } = req.body;
