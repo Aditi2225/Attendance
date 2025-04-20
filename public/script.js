@@ -1,25 +1,3 @@
-// async function markAttendance() {
-//     const reg_number = localStorage.getItem('reg_number');
-//     if (!reg_number){
-//         alert("Registration number not found. Please log in again.");
-//         return;
-//     }
-
-//     const response = await fetch('/api/mark-attendance', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ reg_number })
-//     });
-
-//     const data = await response.json();
-
-//     if (data.success) {
-//         alert(`Attendance marked! Date: ${data.date}, Time: ${data.time}`);
-//     } else {
-//         alert(data.message);
-//     }
-// }
-
 async function markAttendance() {
     const reg_number = localStorage.getItem('reg_number');
     if (!reg_number) {
@@ -136,7 +114,6 @@ async function facultyViewAttendance() {
         alert("Error fetching attendance.");
     }
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault(); 
@@ -169,4 +146,104 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Server error, please try again.');
         }
     });
+
+    // Handle signup
+    document.getElementById('signupButton').addEventListener('click', async () => {
+        const username = document.getElementById('username').value;
+        const identifier = document.getElementById('identifier').value;
+        const role = document.getElementById('role').value;
+
+        if (!username || !identifier) {
+            alert('Please fill out all fields.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, identifier, role })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Signup successful! You can now log in.');
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error('Signup error:', error);
+            alert('Server error during signup.');
+        }
+    });
 });
+
+// document.addEventListener('DOMContentLoaded', () => {
+//     document.getElementById('loginForm').addEventListener('submit', async (e) => {
+//         e.preventDefault();
+
+//         const username = document.getElementById('username').value.trim();
+//         const identifier = document.getElementById('identifier').value.trim();
+//         const role = document.getElementById('role').value;
+
+//         try {
+//             const response = await fetch('/api/login', {
+//                 method: 'POST',
+//                 headers: { 'Content-Type': 'application/json' },
+//                 body: JSON.stringify({ username, identifier, role })
+//             });
+
+//             const data = await response.json();
+
+//             if (data.success) {
+//                 if (role === 'student') {
+//                     localStorage.setItem('reg_number', identifier);
+//                     window.location.href = 'student_dashboard.html';
+//                 } else if (role === 'faculty') {
+//                     window.location.href = 'faculty_dashboard.html';
+//                 }
+//             } else {
+//                 alert(data.message);
+//             }
+//         } catch (error) {
+//             console.error('Login error:', error);
+//             alert('Server error, please try again.');
+//         }
+//     });
+
+//     // Handle Sign Up
+//     document.getElementById('signupButton').addEventListener('click', async () => {
+//         const username = document.getElementById('username').value.trim();
+//         const identifier = document.getElementById('identifier').value.trim();
+//         const role = document.getElementById('role').value;
+
+//         if (role !== 'student') {
+//             alert("Only students can sign up.");
+//             return;
+//         }
+
+//         if (!username || !identifier) {
+//             alert("Please enter both name and registration number.");
+//             return;
+//         }
+
+//         try {
+//             const response = await fetch('/api/signup', {
+//                 method: 'POST',
+//                 headers: { 'Content-Type': 'application/json' },
+//                 body: JSON.stringify({ username, identifier })
+//             });
+
+//             const data = await response.json();
+
+//             if (data.success) {
+//                 alert('Sign up successful. You can now log in.');
+//             } else {
+//                 alert(data.message);
+//             }
+//         } catch (error) {
+//             console.error('Signup error:', error);
+//             alert('Server error, please try again.');
+//         }
+//     });
+// });

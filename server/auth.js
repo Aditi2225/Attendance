@@ -18,46 +18,6 @@ router.post('/start-attendance', (req, res) => {
     res.json({ success: true, message: `Attendance started for ${timeLimit} minute(s)` });
 });
 
-// router.post('/mark-attendance', (req, res) => {
-//     const { reg_number, latitude, longitude } = req.body;
-//     const currentTime = Date.now();
-//     const now = new Date();
-//     const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-//     const time = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' });
-
-//     if (!attendanceStartTime || !attendanceTimeLimit) {
-//         return res.status(400).json({ success: false, message: 'Attendance has not started' });
-//     }
-
-//     const timeElapsed = currentTime - attendanceStartTime;
-//     const status = timeElapsed <= attendanceTimeLimit ? 'Present' : 'Absent';
-
-//     db.run(
-//         `INSERT INTO attendance (reg_number, date, time, status) VALUES (?, ?, ?, ?)`,
-//         [reg_number, date, time, status],
-//         (err) => {
-//             if (err) {
-//                 res.status(500).json({ success: false, message: 'Database error (attendance)' });
-//             } else {
-//                 // Insert location data
-//                 db.run(
-//                     `INSERT INTO location (reg_number, latitude, longitude, date, time) VALUES (?, ?, ?, ?, ?)`,
-//                     [reg_number, latitude, longitude, date, time],
-//                     (locErr) => {
-//                         if (locErr) {
-//                             res.status(500).json({ success: false, message: 'Database error (location)' });
-//                         } else {
-//                             const msg = status === 'Present'
-//                                 ? 'Attendance marked as Present'
-//                                 : 'Attendance session expired, marked as Absent';
-//                             res.json({ success: status === 'Present', message: msg, date, time });
-//                         }
-//                     }
-//                 );
-//             }
-//         }
-//     );
-// });
 router.post('/mark-attendance', (req, res) => {
     const { reg_number, latitude, longitude, classroom } = req.body;
     const currentTime = Date.now();
@@ -103,7 +63,6 @@ router.post('/mark-attendance', (req, res) => {
         status = insideGeoFence ? 'Present' : 'Absent';
     }
 
-    // ✅ Save attendance and location
     db.run(
         `INSERT INTO attendance (reg_number, date, time, status) VALUES (?, ?, ?, ?)`,
         [reg_number, date, time, status],
@@ -214,6 +173,67 @@ router.post('/login', (req, res) => {
         }
     });
 });
+router.post('/signup', (req, res) => {
+    const { username, identifier, role } = req.body;
+
+    if (!username || !identifier || !role) {
+        return res.status(400).json({ success: false, message: 'Missing fields' });
+    }
+
+    const table = role === 'student' ? 'students' : 'faculty';
+    const column = role === 'student' ? 'reg_number' : 'faculty_id';
+
+    db.get(`SELECT * FROM ${table} WHERE ${column} = ?`, [identifier], (err, row) => {
+        if (err) {
+            console.error("Database error:", err.message);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+
+        if (row) {
+            return res.status(400).json({ success: false, message: `${role.charAt(0).toUpperCase() + role.slice(1)} already registered` });
+        }
+
+        db.run(`INSERT INTO ${table} (name, ${column}) VALUES (?, ?)`, [username, identifier], function (err) {
+            if (err) {
+                console.error("Insert error:", err.message);
+                return res.status(500).json({ success: false, message: `Failed to register ${role}` });
+            }
+
+            console.log(`${role} registered:`, { id: this.lastID, name: username, identifier });
+            res.json({ success: true });
+        });
+    });
+});
+
+
+// router.post('/signup', (req, res) => {
+//     const { username, identifier } = req.body;
+
+//     if (!username || !identifier) {
+//         return res.status(400).json({ success: false, message: 'Missing username or identifier' });
+//     }
+
+//     db.get('SELECT * FROM students WHERE reg_number = ?', [identifier], (err, row) => {
+//         if (err) {
+//             console.error("Database error:", err.message);
+//             return res.status(500).json({ success: false, message: 'Database error' });
+//         }
+
+//         if (row) {
+//             return res.status(400).json({ success: false, message: 'Student already registered' });
+//         }
+
+//         db.run('INSERT INTO students (name, reg_number) VALUES (?, ?)', [username, identifier], function (err) {
+//             if (err) {
+//                 console.error("Insert error:", err.message);
+//                 return res.status(500).json({ success: false, message: 'Failed to register student' });
+//             }
+
+//             console.log("Student registered:", { id: this.lastID, name: username, reg_number: identifier });
+//             res.json({ success: true });
+//         });
+//     });
+// });
 
 
 module.exports = router;
