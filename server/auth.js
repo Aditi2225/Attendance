@@ -93,38 +93,27 @@ router.post('/mark-attendance', (req, res) => {
         }
     );
 });
-
-
-router.post('/view-attendance', (req, res) => {
-    const { reg_number } = req.body;
-    db.all(`
-        SELECT date, time, status 
-        FROM attendance 
-        WHERE reg_number = ? 
-        ORDER BY datetime(date || ' ' || time) DESC
-    `, [reg_number], (err, rows) => {
-        if (err) {
-            res.status(500).json({ message: 'Database error' });
-        } else {
-            res.json({ success: true, attendance: rows });
-        }
-    });    
-});
-
 const groupByTime = (records, interval = 2) => {
     const groups = [];
     let currentGroup = [];
     let lastTime = null;
+    const seenRegNumbers = new Set(); // Set to track seen registration numbers
 
     records.forEach(record => {
         const [hours, minutes, seconds] = record.time.split(':').map(Number);
         const totalMinutes = hours * 60 + minutes + seconds / 60;
 
-        if (!lastTime || (totalMinutes - lastTime) <= interval) {
-            currentGroup.push(record);
-        } else {
-            groups.push(currentGroup);
-            currentGroup = [record];
+        // Check if the registration number has already been added in this group
+        if (!seenRegNumbers.has(record.reg_number)) {
+            if (!lastTime || (totalMinutes - lastTime) <= interval) {
+                currentGroup.push(record);
+                seenRegNumbers.add(record.reg_number); // Add to seen set
+            } else {
+                groups.push(currentGroup);
+                currentGroup = [record];
+                seenRegNumbers.clear(); // Clear seen set for the new group
+                seenRegNumbers.add(record.reg_number);
+            }
         }
 
         lastTime = totalMinutes;
@@ -136,6 +125,49 @@ const groupByTime = (records, interval = 2) => {
 
     return groups;
 };
+
+
+// router.post('/view-attendance', (req, res) => {
+//     const { reg_number } = req.body;
+//     db.all(`
+//         SELECT date, time, status 
+//         FROM attendance 
+//         WHERE reg_number = ? 
+//         ORDER BY datetime(date || ' ' || time) DESC
+//     `, [reg_number], (err, rows) => {
+//         if (err) {
+//             res.status(500).json({ message: 'Database error' });
+//         } else {
+//             res.json({ success: true, attendance: rows });
+//         }
+//     });    
+// });
+
+// const groupByTime = (records, interval = 2) => {
+//     const groups = [];
+//     let currentGroup = [];
+//     let lastTime = null;
+
+//     records.forEach(record => {
+//         const [hours, minutes, seconds] = record.time.split(':').map(Number);
+//         const totalMinutes = hours * 60 + minutes + seconds / 60;
+
+//         if (!lastTime || (totalMinutes - lastTime) <= interval) {
+//             currentGroup.push(record);
+//         } else {
+//             groups.push(currentGroup);
+//             currentGroup = [record];
+//         }
+
+//         lastTime = totalMinutes;
+//     });
+
+//     if (currentGroup.length) {
+//         groups.push(currentGroup);
+//     }
+
+//     return groups;
+// };
 
 router.post('/faculty-view-attendance', (req, res) => {
     const date = new Date().toISOString().split('T')[0];
