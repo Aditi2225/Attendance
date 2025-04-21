@@ -186,94 +186,24 @@ router.post('/faculty-view-attendance', (req, res) => {
 });
 router.get('/api/check-proxy', (req, res) => {
     const date = new Date().toISOString().split('T')[0];
+    console.log("Check proxy API called");
 
-    // Query to fetch all attendance records for the current day where the status is 'Present'
-    const attendanceQuery = `
-        SELECT s.name, s.reg_number, a.time
+    const sql = `
+        SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
         FROM attendance a
         JOIN students s ON s.reg_number = a.reg_number
+        JOIN location l ON l.reg_number = s.reg_number AND l.date = ?
         WHERE a.date = ? AND a.status = 'Present'
-        ORDER BY a.time ASC
+        ORDER BY l.time ASC
     `;
 
-    db.all(attendanceQuery, [date], (err, rows) => {
+    db.all(sql, [date, date], (err, rows) => {
         if (err) {
             console.error(err);
-            return res.json({ success: false, message: 'Database error (attendance)' });
+            res.json({ success: false, message: 'Database error' });
+        } else {
+            res.json({ success: true, locations: rows });
         }
-
-        // Group attendance by time (interval = 2 minutes)
-        const groupByTime = (records, interval = 2) => {
-            const groups = [];
-            let currentGroup = [];
-            let lastTime = null;
-            const seen = new Set(); // to avoid duplicate reg numbers in a group
-
-            records.forEach(record => {
-                const [hours, minutes, seconds] = record.time.split(':').map(Number);
-                const totalMinutes = hours * 60 + minutes + (seconds || 0) / 60;
-
-                if (!lastTime || (totalMinutes - lastTime) <= interval) {
-                    if (!seen.has(record.reg_number)) {
-                        currentGroup.push(record);
-                        seen.add(record.reg_number);
-                    }
-                } else {
-                    groups.push(currentGroup);
-                    currentGroup = [record];
-                    seen.clear();
-                    seen.add(record.reg_number);
-                }
-
-                lastTime = totalMinutes;
-            });
-
-            if (currentGroup.length) {
-                groups.push(currentGroup);
-            }
-
-            return groups;
-        };
-
-        // Group students by time and get the most recent group
-        const groups = groupByTime(rows);
-        const latestGroup = groups[groups.length - 1] || [];
-
-        // If no students are present in the latest group, return an empty response
-        if (latestGroup.length === 0) {
-            return res.json({ success: true, locations: [] });
-        }
-
-        // Extract the registration numbers of students in the latest group
-        const regNumbers = latestGroup.map(r => r.reg_number);
-        const placeholders = regNumbers.map(() => '?').join(',');
-
-        // Query to fetch the latest location data for the students in the most recent group
-        const locationQuery = `
-            SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
-            FROM (
-                SELECT l.*
-                FROM location l
-                JOIN (
-                    SELECT reg_number, MAX(time) AS max_time
-                    FROM location
-                    WHERE date = ?
-                    GROUP BY reg_number
-                ) latest ON l.reg_number = latest.reg_number AND l.time = latest.max_time
-                WHERE l.reg_number IN (${placeholders})
-            ) l
-            JOIN students s ON s.reg_number = l.reg_number
-        `;
-
-        db.all(locationQuery, [date, ...regNumbers], (err, locationRows) => {
-            if (err) {
-                console.error(err);
-                return res.json({ success: false, message: 'Database error (location)' });
-            }
-
-            // Return the location data for students in the latest group
-            res.json({ success: true, locations: locationRows });
-        });
     });
 });
 
