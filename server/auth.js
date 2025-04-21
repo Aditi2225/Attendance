@@ -127,21 +127,21 @@ const groupByTime = (records, interval = 2) => {
 };
 
 
-// router.post('/view-attendance', (req, res) => {
-//     const { reg_number } = req.body;
-//     db.all(`
-//         SELECT date, time, status 
-//         FROM attendance 
-//         WHERE reg_number = ? 
-//         ORDER BY datetime(date || ' ' || time) DESC
-//     `, [reg_number], (err, rows) => {
-//         if (err) {
-//             res.status(500).json({ message: 'Database error' });
-//         } else {
-//             res.json({ success: true, attendance: rows });
-//         }
-//     });    
-// });
+router.post('/view-attendance', (req, res) => {
+    const { reg_number } = req.body;
+    db.all(`
+        SELECT date, time, status 
+        FROM attendance 
+        WHERE reg_number = ? 
+        ORDER BY datetime(date || ' ' || time) DESC
+    `, [reg_number], (err, rows) => {
+        if (err) {
+            res.status(500).json({ message: 'Database error' });
+        } else {
+            res.json({ success: true, attendance: rows });
+        }
+    });    
+});
 
 // const groupByTime = (records, interval = 2) => {
 //     const groups = [];
@@ -241,22 +241,27 @@ router.get('/api/check-proxy', (req, res) => {
             return res.json({ success: true, locations: [] });
         }
 
-        const regNumbers = latestGroup.map(r => `'${r.reg_number}'`).join(',');
+        const regNumbers = latestGroup.map(r => r.reg_number);
+const placeholders = regNumbers.map(() => '?').join(',');
 
-        const locationQuery = `
-            SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
-            FROM location l
-            JOIN students s ON s.reg_number = l.reg_number
-            INNER JOIN (
-                SELECT reg_number, MAX(time) AS max_time
-                FROM location
-                WHERE date = ?
-                AND reg_number IN (${regNumbers})
-                GROUP BY reg_number
-            ) latest ON latest.reg_number = l.reg_number AND latest.max_time = l.time
-        `;
+const locationQuery = `
+    SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
+    FROM (
+        SELECT l.*
+        FROM location l
+        JOIN (
+            SELECT reg_number, MAX(time) AS max_time
+            FROM location
+            WHERE date = ?
+            GROUP BY reg_number
+        ) latest ON l.reg_number = latest.reg_number AND l.time = latest.max_time
+        WHERE l.reg_number IN (${placeholders})
+    ) l
+    JOIN students s ON s.reg_number = l.reg_number
+`;
 
-        db.all(locationQuery, [date], (err, locationRows) => {
+db.all(locationQuery, [date, ...regNumbers], (err, locationRows) => {
+
             if (err) {
                 console.error(err);
                 return res.json({ success: false, message: 'Database error (location)' });
