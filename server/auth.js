@@ -187,6 +187,7 @@ router.post('/faculty-view-attendance', (req, res) => {
 router.get('/api/check-proxy', (req, res) => {
     const date = new Date().toISOString().split('T')[0];
 
+    // Query to fetch all attendance records for the current day where the status is 'Present'
     const attendanceQuery = `
         SELECT s.name, s.reg_number, a.time
         FROM attendance a
@@ -201,7 +202,7 @@ router.get('/api/check-proxy', (req, res) => {
             return res.json({ success: false, message: 'Database error (attendance)' });
         }
 
-        // Group attendance by time (interval = 2 min)
+        // Group attendance by time (interval = 2 minutes)
         const groupByTime = (records, interval = 2) => {
             const groups = [];
             let currentGroup = [];
@@ -234,43 +235,48 @@ router.get('/api/check-proxy', (req, res) => {
             return groups;
         };
 
+        // Group students by time and get the most recent group
         const groups = groupByTime(rows);
         const latestGroup = groups[groups.length - 1] || [];
 
+        // If no students are present in the latest group, return an empty response
         if (latestGroup.length === 0) {
             return res.json({ success: true, locations: [] });
         }
 
+        // Extract the registration numbers of students in the latest group
         const regNumbers = latestGroup.map(r => r.reg_number);
-const placeholders = regNumbers.map(() => '?').join(',');
+        const placeholders = regNumbers.map(() => '?').join(',');
 
-const locationQuery = `
-    SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
-    FROM (
-        SELECT l.*
-        FROM location l
-        JOIN (
-            SELECT reg_number, MAX(time) AS max_time
-            FROM location
-            WHERE date = ?
-            GROUP BY reg_number
-        ) latest ON l.reg_number = latest.reg_number AND l.time = latest.max_time
-        WHERE l.reg_number IN (${placeholders})
-    ) l
-    JOIN students s ON s.reg_number = l.reg_number
-`;
+        // Query to fetch the latest location data for the students in the most recent group
+        const locationQuery = `
+            SELECT s.name, s.reg_number, l.latitude, l.longitude, l.time
+            FROM (
+                SELECT l.*
+                FROM location l
+                JOIN (
+                    SELECT reg_number, MAX(time) AS max_time
+                    FROM location
+                    WHERE date = ?
+                    GROUP BY reg_number
+                ) latest ON l.reg_number = latest.reg_number AND l.time = latest.max_time
+                WHERE l.reg_number IN (${placeholders})
+            ) l
+            JOIN students s ON s.reg_number = l.reg_number
+        `;
 
-db.all(locationQuery, [date, ...regNumbers], (err, locationRows) => {
-
+        db.all(locationQuery, [date, ...regNumbers], (err, locationRows) => {
             if (err) {
                 console.error(err);
                 return res.json({ success: false, message: 'Database error (location)' });
             }
 
+            // Return the location data for students in the latest group
             res.json({ success: true, locations: locationRows });
         });
     });
 });
+
 
 // router.get('/api/check-proxy', (req, res) => {
 //     const date = new Date().toISOString().split('T')[0];
