@@ -180,6 +180,10 @@ router.post('/faculty-view-attendance', (req, res) => {
             res.status(500).json({ message: 'Database error' });
         } else {
             const grouped = groupByTime(rows);
+            // Sort each group by reg_number
+            grouped.forEach(group => {
+                group.sort((a, b) => a.reg_number.localeCompare(b.reg_number));
+            });
             res.json({ success: true, groupedAttendance: grouped });
         }
     });
