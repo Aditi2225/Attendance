@@ -22,7 +22,7 @@ router.post('/mark-attendance', (req, res) => {
     const { reg_number, latitude, longitude, classroom } = req.body;
     const currentTime = Date.now();
     const now = new Date();
-    const date = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const date = new Date().toISOString().split('T')[0];
     const time = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Kolkata' });
 
     if (!attendanceStartTime || !attendanceTimeLimit) {
