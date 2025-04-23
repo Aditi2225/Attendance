@@ -211,10 +211,21 @@ router.get('/api/check-proxy', (req, res) => {
         }
 
         const selectedGroup = grouped[groupIndex] || [];
-        res.json({ success: true, locations: selectedGroup });
+        // --- Filter to latest location per student ---
+        const latestLocations = {};
+        selectedGroup.forEach(record => {
+            if (
+                !latestLocations[record.reg_number] ||
+                record.time > latestLocations[record.reg_number].time
+            ) {
+                latestLocations[record.reg_number] = record;
+            }
+        });
+        const uniqueLocations = Object.values(latestLocations);
+
+        res.json({ success: true, locations: uniqueLocations });
     });
 });
-
 
 // router.get('/api/check-proxy', (req, res) => {
 //     const date = new Date().toISOString().split('T')[0];
