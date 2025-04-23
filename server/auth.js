@@ -188,7 +188,7 @@ router.post('/faculty-view-attendance', (req, res) => {
         }
     });
 });
-router.get('/api/check-proxy', (req, res) => {
+router.get('/check-proxy', (req, res) => {
     const date = new Date().toISOString().split('T')[0];
     const groupIndex = parseInt(req.query.group || "1", 10) - 1;
 

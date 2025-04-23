@@ -35,7 +35,7 @@
               return;
           }
   
-          const res = await fetch(`/api/check-proxy?group=${groupNumber}`);
+          const res = await fetch(`/api/check-proxy`);
           const data = await res.json();
           console.log("Fetched locations:", data);
   
